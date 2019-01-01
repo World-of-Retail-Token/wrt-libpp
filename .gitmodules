@@ -1,4 +1,4 @@
-[submodule "extras/rippled"]
-	path = extras/rippled
-	url = https://github.com/ripple/rippled.git
+[submodule "extras/rmcd"]
+	path = extras/rmcd
+	url = https://github.com/CryptoManiac/rmcd.git
 	branch = master
