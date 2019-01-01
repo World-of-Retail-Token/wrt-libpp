@@ -1,4 +1,4 @@
 [submodule "extras/rmcd"]
 	path = extras/rmcd
-	url = https://github.com/CryptoManiac/rmcd.git
+	url = https://github.com/CryptoManiac/rmcd
 	branch = master

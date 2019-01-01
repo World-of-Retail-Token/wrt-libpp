@@ -1,6 +1,6 @@
 //------------------------------------------------------------------------------
 /*
-    This file is part of ripple-libpp: https://github.com/ripple/ripple-libpp
+    This file is part of rmc-libpp: https://github.com/RussianMiningCoin/rmc-libpp
     Copyright (c) 2016 Ripple Labs Inc.
 
     Permission to use, copy, modify, and/or distribute this software for any
@@ -17,8 +17,8 @@
 */
 //==============================================================================
 
-#include <ripple/protocol/AccountID.h>
 #include <ripple/protocol/BuildInfo.h>
+#include <ripple/protocol/AccountID.h>
 #include <ripple/protocol/digest.h>
 #include <ripple/protocol/HashPrefix.h>
 #include <ripple/protocol/JsonFields.h>
@@ -27,7 +27,9 @@
 #include <ripple/protocol/TxFlags.h>
 #include <ripple/basics/StringUtilities.h>
 #include <ripple/json/to_string.h>
+#include <boost/version.hpp>
 #include <algorithm>
+
 
 std::string serialize(ripple::STTx const& tx)
 {
@@ -52,29 +54,28 @@ std::shared_ptr<ripple::STTx const> deserialize(std::string blob)
 
 //------------------------------------------------------------------------------
 
-bool demonstrateSigning(ripple::KeyType keyType, std::string seedStr,
-    std::string expectedAccount)
+bool demonstrateSigning(std::string seedStr, std::string expectedAccount)
 {
     using namespace ripple;
 
     auto const seed = parseGenericSeed(seedStr);
     assert(seed);
-    auto const keypair = generateKeyPair(keyType, *seed);
+    auto const keypair = generateKeyPair(*seed);
     auto const id = calcAccountID(keypair.first);
     assert(toBase58(id) == expectedAccount);
 
-    std::cout << "\n" << to_string(keyType) << " secret \"" << seedStr
+    std::cout << "\n secret \"" << seedStr
         << "\" generates secret key \"" << toBase58(*seed)
         << "\" and public key \"" << toBase58(id) << "\"\n";
 
     auto const destination = parseBase58<AccountID>(
-        "rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh");
+        "19HVVcvqHvFocvwpdN4nB5AXXgg19qqpw3");
     assert(destination);
     auto const gateway1 = parseBase58<AccountID>(
-        "rhub8VRN55s94qWKDv6jmDy1pUykJzF3wq");
+        "1BkdSQgVE1gyf7HZEJh3qo777MsKTC1eWJ");
     assert(gateway1);
     auto const gateway2 = parseBase58<AccountID>(
-        "razqQKzJRdB4UxFPWf5NEpEG3WMkmwgcXA");
+        "19NfziqriXz3UnM3wARPTT3jx6eV1bbPmh");
     assert(gateway2);
     STTx noopTx(ttPAYMENT,
         [&](auto& obj)
@@ -89,7 +90,7 @@ bool demonstrateSigning(ripple::KeyType keyType, std::string seedStr,
         obj[sfAmount] = STAmount(Issue(to_currency("USD"), *gateway1),
             1234, 5);
         obj[sfDestination] = *destination;
-        obj[sfSendMax] = STAmount(Issue(to_currency("CNY"), *gateway2),
+        obj[sfSendMax] = STAmount(Issue(to_currency("RUB"), *gateway2),
             56789, 7);
     });
 
@@ -145,16 +146,9 @@ bool exerciseSingleSign ()
 {
     std::vector<bool> passes;
 
-    passes.emplace_back(demonstrateSigning(ripple::KeyType::secp256k1,
-        "alice", "rG1QQv2nh2gr7RCZ1P8YYcBUKCCN633jCn"));
-
-    passes.emplace_back(demonstrateSigning(ripple::KeyType::ed25519,
-        "alice", "r9mC1zjD9u5SJXw56pdPhxoDSHaiNcisET"));
-
     // Genesis account w/ not-so-secret key.
     // Never hardcode a real secret key.
-    passes.emplace_back(demonstrateSigning(ripple::KeyType::secp256k1,
-        "snoPBrXtMeMyMHUVTgbuqAfg1SUTb", "rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh"));
+    passes.emplace_back(demonstrateSigning("35tDMF67PWq8XmqY88CjBPZspfwX2", "19HVVcvqHvFocvwpdN4nB5AXXgg19qqpw3"));
 
     {
         passes.emplace_back(false);
@@ -203,25 +197,20 @@ ripple::Seed getSeed (std::string const& seedText)
 class Credentials
 {
     std::string const name_;
-    ripple::KeyType const keyType_;
     ripple::Seed const seed_;
     std::pair<ripple::PublicKey, ripple::SecretKey> const keys_;
     ripple::AccountID const id_;
 
 public:
-    Credentials (
-        std::string name,
-        ripple::KeyType keyType = ripple::KeyType::secp256k1)
+    Credentials (std::string name)
     : name_ (name)
-    , keyType_ (keyType)
     , seed_ (getSeed (name_))
-    , keys_ (ripple::generateKeyPair (keyType_, seed_))
+    , keys_ (ripple::generateKeyPair (seed_))
     , id_ (ripple::calcAccountID (keys_.first))
     {
     }
 
     std::string const& name() const { return name_; }
-    ripple::KeyType const& keyType() const { return keyType_; }
     ripple::Seed const& seed() const { return seed_; }
     ripple::SecretKey const& secretKey() const { return keys_.second; }
     ripple::PublicKey const& publicKey() const { return keys_.first; }
@@ -336,6 +325,9 @@ int main (int argc, char** argv)
     // Display the version
     std::cout << "ripple-libpp_demo built with ripple core version " <<
         ripple::BuildInfo::getVersionString() << "\n";
+
+    static_assert (BOOST_VERSION >= 105700,
+        "Boost version 1.57 or later is required to compile rippled");
 
     // Demonstrate single signing.
     auto allPass = exerciseSingleSign();
