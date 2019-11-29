@@ -17,19 +17,18 @@
 */
 //==============================================================================
 
-#include <ripple/protocol/BuildInfo.h>
 #include <ripple/protocol/AccountID.h>
+#include <ripple/protocol/BuildInfo.h>
 #include <ripple/protocol/digest.h>
 #include <ripple/protocol/HashPrefix.h>
-#include <ripple/protocol/JsonFields.h>
+#include <ripple/protocol/jss.h>
 #include <ripple/protocol/Sign.h>
 #include <ripple/protocol/st.h>
 #include <ripple/protocol/TxFlags.h>
+#include <ripple/protocol/STTx.h>
 #include <ripple/basics/StringUtilities.h>
 #include <ripple/json/to_string.h>
-#include <boost/version.hpp>
 #include <algorithm>
-
 
 std::string serialize(ripple::STTx const& tx)
 {
@@ -44,10 +43,10 @@ std::shared_ptr<ripple::STTx const> deserialize(std::string blob)
 
     auto ret{ strUnHex(blob) };
 
-    if (!ret.second || !ret.first.size())
+    if (!ret || !ret->size())
         Throw<std::runtime_error>("transaction not valid hex");
 
-    SerialIter sitTrans{ makeSlice(ret.first) };
+    SerialIter sitTrans{ makeSlice(*ret) };
     // Can Throw
     return std::make_shared<STTx const>(std::ref(sitTrans));
 }
@@ -60,7 +59,7 @@ bool demonstrateSigning(std::string seedStr, std::string expectedAccount)
 
     auto const seed = parseGenericSeed(seedStr);
     assert(seed);
-    auto const keypair = generateKeyPair(*seed);
+    auto const keypair = generateKeyPair(*seed, true);
     auto const id = calcAccountID(keypair.first);
     assert(toBase58(id) == expectedAccount);
 
@@ -95,21 +94,21 @@ bool demonstrateSigning(std::string seedStr, std::string expectedAccount)
     });
 
     std::cout << "\nBefore signing: \n" <<
-        noopTx.getJson(0).toStyledString() << "\n" <<
-        "Serialized: " << noopTx.getJson(0, true)[jss::tx] << "\n";
+        noopTx.getJson(JsonOptions::none).toStyledString() << "\n" <<
+        "Serialized: " << noopTx.getJson(JsonOptions::none, true)[jss::tx] << "\n";
 
     noopTx.sign(keypair.first, keypair.second);
 
     auto const serialized = serialize(noopTx);
     std::cout << "\nAfter signing: \n" <<
-        noopTx.getJson(0).toStyledString() << "\n" <<
+        noopTx.getJson(JsonOptions::none).toStyledString() << "\n" <<
         "Serialized: " << serialized << "\n";
 
     auto const deserialized = deserialize(serialized);
     assert(deserialized);
     assert(deserialized->getTransactionID() == noopTx.getTransactionID());
     std::cout << "Deserialized: " <<
-        deserialized->getJson(0).toStyledString() << "\n";
+        deserialized->getJson(JsonOptions::none).toStyledString() << "\n";
 
     auto const check1 = noopTx.checkSign(false);
 
@@ -205,7 +204,7 @@ public:
     Credentials (std::string name)
     : name_ (name)
     , seed_ (getSeed (name_))
-    , keys_ (ripple::generateKeyPair (seed_))
+    , keys_ (ripple::generateKeyPair (seed_, true))
     , id_ (ripple::calcAccountID (keys_.first))
     {
     }
@@ -237,7 +236,7 @@ ripple::STTx buildMultisignTx (
     }};
 
     std::cout << "\nBefore signing: \n"
-        << noopTx.getJson(0, false).toStyledString()  << std::endl;
+        << noopTx.getJson(JsonOptions::none, false).toStyledString()  << std::endl;
 
     return noopTx;
 }
@@ -283,14 +282,14 @@ bool multisign (ripple::STTx& tx, Credentials const& signer)
     // To submit multisigned JSON to the network use this RPC command:
     // $ rippled submit_multisigned '<all JSON>'
     std::cout << "\nMultisigned JSON: \n"
-        << tx.getJson(0, false).toStyledString()  << std::endl;
+        << tx.getJson(JsonOptions::none, false).toStyledString()  << std::endl;
 
     // Alternatively, to submit the multisigned blob to the network:
     //  1. Extract the hex string (including the quotes) following "tx"
     //  2. Then use this RPC command:
     //     $ rippled submit <quoted hex string>
     std::cout << "Multisigned blob:"
-        << tx.getJson(0, true) << std::endl;
+        << tx.getJson(JsonOptions::none, true) << std::endl;
 
     return pass;
 }
@@ -325,9 +324,6 @@ int main (int argc, char** argv)
     // Display the version
     std::cout << "ripple-libpp_demo built with ripple core version " <<
         ripple::BuildInfo::getVersionString() << "\n";
-
-    static_assert (BOOST_VERSION >= 105700,
-        "Boost version 1.57 or later is required to compile rippled");
 
     // Demonstrate single signing.
     auto allPass = exerciseSingleSign();
