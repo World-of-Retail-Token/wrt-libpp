@@ -1,0 +1,3 @@
+[submodule "extras/wrtd"]
+	path = extras/wrtd
+	url = https://github.com/World-of-Retail-Token/wrtd
