@@ -2,16 +2,16 @@ cmake_minimum_required(VERSION 3.9)
 project(wrt-libppdemo)
 
 #[===========================================[
-  this pulls-in the rmcd source code via
+  this pulls-in the wrtd source code via
   git submodule. This demo exe depends on the
   xrpl_core library which is defined by the
-  rmcd project.
+  wrtd project.
 #]===========================================]
 if (MSVC)
   #[=======================================[
     HACK to patch a one-line windows-only
-    bug in rmcd CMakeLists.txt. This can
-    be removed once rmcd 1.2 is available
+    bug in wrtd CMakeLists.txt. This can
+    be removed once wrtd 1.2 is available
     and we update the submodule
   #]=======================================]
   execute_process( COMMAND powershell -Command
